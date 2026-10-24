@@ -7,6 +7,8 @@ description: Implemented changes that still need manual verification
 
 The current release needs manual verification in these areas:
 
+- OpenAI image relative URLs: generate or edit with an OpenAI-format API that returns `url: "/images/...png"`; the app should fetch it from the provider API host and display it on the canvas. Absolute URLs and `b64_json` should continue working, and image downloads should still pass through the local proxy when enabled.
+
 - Main application Docker workflow: pushing a commit to `main` should run the existing multi-platform build and publish the `main`, `latest`, and commit SHA tags under `ghcr.io/<current-repository-owner>/infinite-canvas`. A fork should publish under its own owner's GHCR namespace. Pushing a `v*` tag should continue publishing the version and SHA tags without changing the existing release flow.
 
 - Image generation error diagnostics: make a canvas image request fail and confirm Node information shows both the user-facing error and diagnostics. Diagnostics should include the request method, redacted URL, Axios code, HTTP status, and server response body, but no request headers, API key, or prompt. Copy diagnostics and confirm the full text can be pasted. A network/CORS error should at least show `ERR_NETWORK` and `Network Error`, explain that JavaScript received no readable HTTP response, and direct deeper investigation to the browser Network/Console panels.
