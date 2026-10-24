@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { App, Modal, Segmented, Tooltip } from "antd";
-import { Download, Ellipsis, FolderPlus, Image as ImageIcon, Info, MessageSquare, Minus, Music2, Plus, RefreshCw, Settings2, Trash2, Ungroup, Upload, Video } from "lucide-react";
+import { ClipboardCopy, Download, Ellipsis, FolderPlus, Image as ImageIcon, Info, MessageSquare, Minus, Music2, Plus, RefreshCw, Settings2, Trash2, Ungroup, Upload, Video } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 import { canvasThemes } from "@/lib/canvas-theme";
@@ -219,9 +219,11 @@ export function CanvasNodeHoverToolbar({
 export function CanvasNodeInfoModal({ node, open, onClose }: { node: CanvasNodeData | null; open: boolean; onClose: () => void }) {
     const theme = canvasThemes[useThemeStore((state) => state.theme)];
     const { t } = useTranslation();
+    const copyText = useCopyText();
     const [view, setView] = useState<"info" | "json">("info");
     const imageBytes = node?.type === CanvasNodeType.Image && node.metadata?.content ? getDataUrlByteSize(node.metadata.content) : 0;
     const batchCount = node?.type === CanvasNodeType.Image ? node.metadata?.images?.length || 0 : 0;
+    const errorDiagnostics = node?.metadata?.errorDiagnostics || node?.metadata?.images?.find((image) => image.errorDiagnostics)?.errorDiagnostics;
     const json = useMemo(() => {
         if (!node) return "";
         return JSON.stringify(
@@ -275,6 +277,20 @@ export function CanvasNodeInfoModal({ node, open, onClose }: { node: CanvasNodeD
                                 <div className="rounded-lg border p-3 text-red-400" style={{ borderColor: theme.node.stroke }}>
                                     {node.metadata.errorDetails}
                                 </div>
+                            ) : null}
+                            {errorDiagnostics ? (
+                                <section className="overflow-hidden rounded-lg border" style={{ borderColor: theme.node.stroke }}>
+                                    <div className="flex items-center justify-between gap-3 border-b px-3 py-2" style={{ borderColor: theme.node.stroke }}>
+                                        <span>{t("canvas.nodeToolbar.errorDiagnostics")}</span>
+                                        <button type="button" className="inline-flex items-center gap-1.5 text-xs opacity-75 hover:opacity-100" onClick={() => copyText(errorDiagnostics, t("canvas.nodeToolbar.diagnosticsCopied"))}>
+                                            <ClipboardCopy size={14} />
+                                            {t("canvas.nodeToolbar.copyDiagnostics")}
+                                        </button>
+                                    </div>
+                                    <pre className="max-h-56 overflow-auto whitespace-pre-wrap break-all p-3 text-xs leading-5" style={{ color: theme.node.text }}>
+                                        {errorDiagnostics}
+                                    </pre>
+                                </section>
                             ) : null}
                         </div>
                     ) : (

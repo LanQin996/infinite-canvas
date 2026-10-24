@@ -296,6 +296,50 @@ function readAxiosError(error: unknown, fallback: string) {
     return error instanceof Error ? readApiErrorMessage(error.message) || error.message : fallback;
 }
 
+export function getImageRequestDiagnostics(error: unknown) {
+    if (error && typeof error === "object" && "diagnostics" in error && typeof error.diagnostics === "string") return error.diagnostics;
+    if (!axios.isAxiosError(error)) {
+        if (error instanceof Error) return JSON.stringify({ name: error.name, message: error.message }, null, 2);
+        return JSON.stringify({ error: String(error) }, null, 2);
+    }
+    const config = error.config;
+    let url: URL | undefined;
+    try {
+        if (config?.url) url = new URL(config.url, config.baseURL || (typeof window === "undefined" ? "http://localhost" : window.location.origin));
+    } catch {
+        // Keep diagnostics available even if a malformed URL caused the request to fail.
+    }
+    if (url) {
+        url.username = "";
+        url.password = "";
+        for (const key of [...url.searchParams.keys()]) url.searchParams.set(key, "[redacted]");
+    }
+    const response = error.response;
+    const details = {
+        method: config?.method?.toUpperCase(),
+        url: url?.toString(),
+        code: error.code,
+        message: error.message,
+        responseReceived: Boolean(response),
+        browserNote: !response && error.code === "ERR_NETWORK" ? "No HTTP response was available to JavaScript; check the browser Network/Console panel for CORS, DNS, TLS, or proxy details." : undefined,
+        status: response?.status,
+        statusText: response?.statusText,
+        response: response?.data,
+    };
+    try {
+        return JSON.stringify(details, null, 2);
+    } catch {
+        return JSON.stringify({ ...details, response: String(response?.data) }, null, 2);
+    }
+}
+
+function createImageRequestError(error: unknown, fallback: string) {
+    const wrapped = new Error(readAxiosError(error, fallback));
+    const diagnostics = getImageRequestDiagnostics(error);
+    if (diagnostics) Object.assign(wrapped, { diagnostics });
+    return wrapped;
+}
+
 function readStatusError(status: number | undefined, fallback: string) {
     if (status === 401 || status === 403) return apiText("authenticationFailed");
     if (status === 429) return apiText("rateLimited");
@@ -711,14 +755,14 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
             });
             return normalizePluginImages(result).map((dataUrl) => ({ id: nanoid(), dataUrl }));
         } catch (error) {
-            throw new Error(readAxiosError(error, apiText("requestFailed")));
+            throw createImageRequestError(error, apiText("requestFailed"));
         }
     }
     if (requestConfig.apiFormat === "gemini") {
         try {
             return await requestGeminiImages(requestConfig, prompt, [], n, options);
         } catch (error) {
-            throw new Error(readAxiosError(error, apiText("requestFailed")));
+            throw createImageRequestError(error, apiText("requestFailed"));
         }
     }
     const quality = normalizeQuality(config.quality);
@@ -747,7 +791,7 @@ export async function requestGeneration(config: AiConfig, prompt: string, option
         const images = await parseImagePayload(response.data);
         return images;
     } catch (error) {
-        throw new Error(readAxiosError(error, apiText("requestFailed")));
+        throw createImageRequestError(error, apiText("requestFailed"));
     }
 }
 
@@ -773,14 +817,14 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
             });
             return normalizePluginImages(result).map((dataUrl) => ({ id: nanoid(), dataUrl }));
         } catch (error) {
-            throw new Error(readAxiosError(error, apiText("requestFailed")));
+            throw createImageRequestError(error, apiText("requestFailed"));
         }
     }
     if (requestConfig.apiFormat === "gemini") {
         try {
             return await requestGeminiImages(requestConfig, requestPrompt, references, n, options);
         } catch (error) {
-            throw new Error(readAxiosError(error, apiText("requestFailed")));
+            throw createImageRequestError(error, apiText("requestFailed"));
         }
     }
 
@@ -814,7 +858,7 @@ export async function requestEdit(config: AiConfig, prompt: string, references: 
         const images = await parseImagePayload(response.data);
         return images;
     } catch (error) {
-        throw new Error(readAxiosError(error, apiText("requestFailed")));
+        throw createImageRequestError(error, apiText("requestFailed"));
     }
 }
 
@@ -835,7 +879,7 @@ export async function requestImageQuestion(config: AiConfig, messages: AiTextMes
             if (text === apiText("noContent")) onDelta(text);
             return text;
         } catch (error) {
-            throw new Error(readAxiosError(error, apiText("requestFailed")));
+            throw createImageRequestError(error, apiText("requestFailed"));
         }
     }
     try {
@@ -852,7 +896,7 @@ export async function requestImageQuestion(config: AiConfig, messages: AiTextMes
         if (answer === apiText("noContent")) onDelta(answer);
         return answer;
     } catch (error) {
-        throw new Error(readAxiosError(error, apiText("requestFailed")));
+        throw createImageRequestError(error, apiText("requestFailed"));
     }
 }
 
