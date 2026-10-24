@@ -10,20 +10,22 @@ permissions:
   contents: read
   packages: write
 
-env:
-  IMAGE_NAME: ghcr.io/basketikun/infinite-canvas
-
 jobs:
   meta:
     runs-on: ubuntu-latest
     outputs:
+      image_name: ${{ steps.image-name.outputs.image_name }}
       tags: ${{ steps.meta.outputs.tags }}
       labels: ${{ steps.meta.outputs.labels }}
     steps:
+      - id: image-name
+        shell: bash
+        run: echo "image_name=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/infinite-canvas" >> "$GITHUB_OUTPUT"
+
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.IMAGE_NAME }}
+          images: ${{ steps.image-name.outputs.image_name }}
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=ref,event=branch
@@ -60,7 +62,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           labels: ${{ needs.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.IMAGE_NAME }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ needs.meta.outputs.image_name }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=app-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=app-${{ matrix.arch }}
 
@@ -101,6 +103,7 @@ jobs:
       - name: Create multi-arch manifest
         shell: bash
         env:
+          IMAGE_NAME: ${{ needs.meta.outputs.image_name }}
           TAGS: ${{ needs.meta.outputs.tags }}
         run: |
           tag_args=()

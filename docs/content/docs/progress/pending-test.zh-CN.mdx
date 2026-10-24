@@ -5,7 +5,7 @@ description: 当前版本已实现但仍需人工验证的变更项
 
 # 待测试
 
-- 主应用 Docker 镜像工作流：向 `main` 推送提交后，应运行现有多架构构建并发布 `ghcr.io/basketikun/infinite-canvas:main`、`:latest` 和对应提交 SHA 标签；推送 `v*` 标签仍应只发布版本标签和 SHA 标签，不应改变原有流程。
+- 主应用 Docker 镜像工作流：向 `main` 推送提交后，应运行现有多架构构建并发布到 `ghcr.io/<当前仓库所有者>/infinite-canvas` 的 `main`、`latest` 和提交 SHA 标签；推送 `v*` 标签仍应只发布版本标签和 SHA 标签，不应改变原有流程。fork 仓库应写入 fork 所有者自己的 GHCR 命名空间。
 
 - 生图错误诊断：让画布生图请求失败，在节点信息中应同时看到原错误提示和诊断信息；诊断应包含请求方法、脱敏后的 URL、Axios 错误码、HTTP 状态及服务端响应体，不应包含请求头、API Key 或提示词。点击「复制诊断」后应能粘贴完整信息；网络/CORS 错误至少应显示 `ERR_NETWORK` 和 `Network Error`，并说明 JavaScript 未收到可读取的 HTTP 响应，需到浏览器 Network/Console 查看具体拦截原因。
 
